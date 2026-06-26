@@ -38,11 +38,26 @@ def fit_frame_to_display(frame, config: DisplayConfig):
     return canvas, (x, y, resized_width, resized_height)
 
 
-def draw_phase_one_overlay(
+def frame_point_to_display(
+    point: tuple[int, int] | None,
+    frame_shape,
+    frame_bounds,
+) -> tuple[int, int] | None:
+    if point is None:
+        return None
+
+    frame_height, frame_width = frame_shape[:2]
+    x, y, display_width, display_height = frame_bounds
+    scale_x = display_width / frame_width
+    scale_y = display_height / frame_height
+    return int(x + point[0] * scale_x), int(y + point[1] * scale_y)
+
+
+def draw_app_overlay(
     display_frame,
     frame_bounds,
     hand_detected: bool,
-    drawing_active: bool,
+    mode: str,
     fps: float,
 ) -> None:
     x, y, width, height = frame_bounds
@@ -59,8 +74,15 @@ def draw_phase_one_overlay(
     cv2.rectangle(overlay, (0, 0), (display_frame.shape[1], 74), (12, 14, 18), -1)
     cv2.addWeighted(overlay, 0.78, display_frame, 0.22, 0, display_frame)
 
-    status = "Drawing" if drawing_active else ("Hand: Yes" if hand_detected else "Hand: No")
-    status_color = (90, 230, 140) if drawing_active else (80, 170, 255)
+    if mode == "Draw":
+        status = "Mode: Draw"
+        status_color = (90, 230, 140)
+    elif mode == "Move":
+        status = "Mode: Move"
+        status_color = (80, 170, 255)
+    else:
+        status = "Mode: Idle" if hand_detected else "Hand: No"
+        status_color = (180, 190, 205)
 
     cv2.putText(
         display_frame,
@@ -94,7 +116,7 @@ def draw_phase_one_overlay(
     )
     cv2.putText(
         display_frame,
-        "C: Clear   Q / Esc: Exit",
+        "1 finger: Draw   2 fingers: Move/Select toolbar   C: Clear   Q / Esc: Exit",
         (28, display_frame.shape[0] - 24),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.58,
