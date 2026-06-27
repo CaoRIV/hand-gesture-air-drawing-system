@@ -20,6 +20,7 @@ from mediapipe.tasks.python import vision
 class HandTrackerConfig:
     max_num_hands: int = 1
     min_detection_confidence: float = 0.7
+    min_hand_presence_confidence: float = 0.5
     min_tracking_confidence: float = 0.5
     model_asset_path: str = str(
         Path(__file__).resolve().parent / "models" / "hand_landmarker.task"
@@ -42,6 +43,7 @@ class HandTracker:
             running_mode=vision.RunningMode.IMAGE,
             num_hands=self.config.max_num_hands,
             min_hand_detection_confidence=self.config.min_detection_confidence,
+            min_hand_presence_confidence=self.config.min_hand_presence_confidence,
             min_tracking_confidence=self.config.min_tracking_confidence,
         )
         self._landmarker = vision.HandLandmarker.create_from_options(options)
