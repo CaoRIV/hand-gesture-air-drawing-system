@@ -1,6 +1,9 @@
 # Hand Gesture Air Drawing System
 
-The app opens the default webcam, detects one hand with MediaPipe Hands, follows a smoothed index fingertip point, draws strokes only in draw mode, supports a gesture toolbar, cleans each completed stroke, and can snap simple strokes into clean letters or digits.
+This project has two gesture-controlled experiences:
+
+- Air drawing: draw with your hand, use a gesture toolbar, clean strokes, and snap simple strokes into clean letters or digits.
+- Gesture puzzle: capture a webcam image and solve a 3x3 tile puzzle with pinch gestures.
 
 ## Requirements
 
@@ -13,13 +16,13 @@ Install dependencies:
 D:\Python3\python.exe -m pip install -r requirements.txt
 ```
 
-## Run
+## Run Air Drawing
 
 ```powershell
 D:\Python3\python.exe main.py
 ```
 
-Controls:
+Air drawing controls:
 
 - Index finger only: draw
 - Index + middle fingers: move cursor without drawing and select toolbar items
@@ -36,6 +39,23 @@ Toolbar:
 - `Clear`: clear the canvas
 - `Save`: save the drawing to `outputs/saved_drawings`
 
+## Run Gesture Puzzle
+
+```powershell
+D:\Python3\python.exe game_main.py
+```
+
+Puzzle controls:
+
+- Two-hand capture gesture: place both thumbs + both index fingers near the center, spread both hands outward, then hold still to capture
+- `Space`, `Enter`, or `C`: fallback capture
+- The HUD shows `Hands: 0/2`, `1/2`, or `2/2`; the two-hand gesture needs `2/2`
+- Move hand: control cursor
+- Pinch on a tile: grab/select tile
+- Release over another tile: swap tiles
+- `r`: restart after victory
+- `q` or `Esc`: quit
+
 ## Current Scope
 
 Implemented:
@@ -43,6 +63,9 @@ Implemented:
 - Webcam capture with mirrored preview
 - MediaPipe hand landmark detection
 - Local MediaPipe Tasks model at `models/hand_landmarker.task`
+- Gesture-controlled 3x3 webcam puzzle game
+- Pinch gesture tile selection and swapping
+- Puzzle timer, move counter, cursor, and victory screen
 - Debug landmark drawing
 - Smoothed index fingertip drawing on a separate virtual canvas
 - Opaque high-saturation drawing colors for stronger strokes
