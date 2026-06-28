@@ -16,6 +16,20 @@ Install dependencies:
 D:\Python3\python.exe -m pip install -r requirements.txt
 ```
 
+## Run Main Menu
+
+```powershell
+D:\Python3\python.exe app.py
+```
+
+Menu controls:
+
+- `1`: Air Drawing
+- `2`: Gesture Puzzle
+- `W` / `S`: select menu item
+- `Enter`: open selected item
+- `Q` or `Esc`: quit
+
 ## Run Air Drawing
 
 ```powershell
@@ -63,6 +77,7 @@ Implemented:
 - Webcam capture with mirrored preview
 - MediaPipe hand landmark detection
 - Local MediaPipe Tasks model at `models/hand_landmarker.task`
+- Home menu launcher for selecting drawing or puzzle mode
 - Gesture-controlled 3x3 webcam puzzle game
 - Pinch gesture tile selection and swapping
 - Puzzle timer, move counter, cursor, and victory screen
