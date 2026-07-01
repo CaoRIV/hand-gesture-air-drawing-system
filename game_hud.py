@@ -12,7 +12,7 @@ def draw_capture_hud(
     capture_progress: float,
     difficulty: int,
 ) -> None:
-    _draw_top_bar(frame, "Gesture Puzzle", "Frame a snapshot with both hands.")
+    _draw_top_bar(frame, "Gesture Puzzle", "Open both hands to auto capture a snapshot.")
     hand_color = ui.GREEN if hand_count >= 2 else ui.YELLOW
     width = frame.shape[1]
     ui.chip(frame, (width - 512, 22, 132, 34), f"HANDS {hand_count}/2", color=hand_color, active=hand_count >= 2)
@@ -22,7 +22,7 @@ def draw_capture_hud(
     _draw_bottom_panel(
         frame,
         capture_message,
-        "3/4 Difficulty    Space/Enter/C Fallback capture    Q/Esc Quit",
+        "Open hands wide, hold still briefly    3/4 Difficulty    Space/Enter/C Fallback",
         hand_color,
     )
 
@@ -54,12 +54,12 @@ def draw_countdown_hud(frame, remaining_seconds: float, difficulty: int) -> None
 
 
 def draw_capture_gesture(frame, points, bounds) -> None:
-    center = (frame.shape[1] // 2, frame.shape[0] // 2)
-    cv2.circle(frame, center, 82, ui.BORDER_SOFT, 1, cv2.LINE_AA)
-    cv2.line(frame, (center[0] - 112, center[1]), (center[0] - 72, center[1]), ui.CYAN, 2, cv2.LINE_AA)
-    cv2.line(frame, (center[0] + 72, center[1]), (center[0] + 112, center[1]), ui.CYAN, 2, cv2.LINE_AA)
-    cv2.line(frame, (center[0], center[1] - 112), (center[0], center[1] - 72), ui.CYAN, 2, cv2.LINE_AA)
-    cv2.line(frame, (center[0], center[1] + 72), (center[0], center[1] + 112), ui.CYAN, 2, cv2.LINE_AA)
+    height, width = frame.shape[:2]
+    guide_width = int(width * 0.62)
+    guide_height = int(height * 0.54)
+    guide_x = (width - guide_width) // 2
+    guide_y = (height - guide_height) // 2 + 24
+    _draw_corner_guide(frame, (guide_x, guide_y, guide_width, guide_height), ui.CYAN)
 
     for point in points:
         cv2.circle(frame, point, 12, ui.GREEN, -1, cv2.LINE_AA)
@@ -78,6 +78,26 @@ def draw_capture_gesture(frame, points, bounds) -> None:
         3,
         cv2.LINE_AA,
     )
+
+
+def _draw_corner_guide(
+    frame,
+    rect: tuple[int, int, int, int],
+    color: tuple[int, int, int],
+) -> None:
+    x, y, width, height = rect
+    corner = 72
+    for start, end in [
+        ((x, y), (x + corner, y)),
+        ((x, y), (x, y + corner)),
+        ((x + width - corner, y), (x + width, y)),
+        ((x + width, y), (x + width, y + corner)),
+        ((x, y + height), (x + corner, y + height)),
+        ((x, y + height - corner), (x, y + height)),
+        ((x + width - corner, y + height), (x + width, y + height)),
+        ((x + width, y + height - corner), (x + width, y + height)),
+    ]:
+        cv2.line(frame, start, end, color, 3, cv2.LINE_AA)
 
 
 def draw_play_hud(
