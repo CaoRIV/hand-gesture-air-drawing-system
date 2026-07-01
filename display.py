@@ -5,13 +5,15 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
+import ui_theme as ui
+
 
 @dataclass(frozen=True)
 class DisplayConfig:
     width: int = 1280
     height: int = 720
-    background_color: tuple[int, int, int] = (18, 20, 24)
-    border_color: tuple[int, int, int] = (92, 180, 255)
+    background_color: tuple[int, int, int] = ui.BG
+    border_color: tuple[int, int, int] = ui.CYAN
 
 
 def fit_frame_to_display(frame, config: DisplayConfig):
@@ -63,76 +65,94 @@ def draw_app_overlay(
 ) -> None:
     x, y, width, height = frame_bounds
 
-    cv2.rectangle(
-        display_frame,
-        (x, y),
-        (x + width - 1, y + height - 1),
-        (92, 180, 255),
-        2,
-    )
-
-    overlay = display_frame.copy()
-    cv2.rectangle(overlay, (0, 0), (display_frame.shape[1], 74), (12, 14, 18), -1)
-    cv2.addWeighted(overlay, 0.78, display_frame, 0.22, 0, display_frame)
+    _draw_frame_border(display_frame, (x, y, width, height))
+    ui.blend_rect(display_frame, (0, 0), (display_frame.shape[1], 78), (10, 13, 20), 0.82)
+    cv2.line(display_frame, (0, 78), (display_frame.shape[1], 78), ui.BORDER_SOFT, 1, cv2.LINE_AA)
 
     if mode == "Draw":
-        status = "Mode: Draw"
-        status_color = (90, 230, 140)
+        status = "MODE DRAW"
+        status_color = ui.GREEN
     elif mode == "Move":
-        status = "Mode: Move"
-        status_color = (80, 170, 255)
+        status = "MODE MOVE"
+        status_color = ui.CYAN
     else:
-        status = "Mode: Idle" if hand_detected else "Hand: No"
-        status_color = (180, 190, 205)
+        status = "MODE IDLE"
+        status_color = ui.TEXT_DIM
 
-    cv2.putText(
+    ui.put_text(
         display_frame,
-        "Hand Gesture Air Drawing",
+        "Air Drawing",
         (28, 46),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.9,
-        (245, 247, 250),
+        0.94,
+        ui.TEXT,
         2,
-        cv2.LINE_AA,
+    )
+    ui.put_text(
+        display_frame,
+        "Pinch to draw. Release to clean or detect symbols.",
+        (30, 68),
+        0.42,
+        ui.TEXT_MUTED,
+        1,
     )
     if detected_symbol is not None:
-        cv2.putText(
+        ui.chip(
             display_frame,
-            f"Phat hien: {detected_symbol}",
-            (430, 45),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.82,
-            (80, 240, 150),
-            2,
-            cv2.LINE_AA,
+            (418, 22, 214, 34),
+            f"PHAT HIEN: {detected_symbol}",
+            color=ui.GREEN,
+            active=True,
         )
-    cv2.putText(
+    ui.chip(
         display_frame,
+        (display_frame.shape[1] - 484, 22, 142, 34),
         status,
-        (display_frame.shape[1] - 390, 45),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.72,
-        status_color,
-        2,
-        cv2.LINE_AA,
+        color=status_color,
+        active=mode in ("Draw", "Move"),
     )
-    cv2.putText(
+    ui.chip(
         display_frame,
-        f"FPS: {fps:04.1f}",
-        (display_frame.shape[1] - 210, 45),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.72,
-        (245, 247, 250),
-        2,
-        cv2.LINE_AA,
+        (display_frame.shape[1] - 332, 22, 126, 34),
+        "HAND OK" if hand_detected else "HAND --",
+        color=ui.GREEN if hand_detected else ui.YELLOW,
+        active=hand_detected,
     )
-    cv2.putText(
+    ui.chip(
         display_frame,
-        "Pinch: Draw/Erase   2 fingers: Move/Select toolbar   C: Clear   Q / Esc: Exit",
-        (28, display_frame.shape[0] - 24),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.58,
-        (220, 224, 230),
+        (display_frame.shape[1] - 196, 22, 150, 34),
+        f"FPS {fps:04.1f}",
+        color=ui.CYAN,
+        active=False,
+    )
+    _draw_bottom_help(display_frame)
+
+
+def _draw_frame_border(display_frame, bounds: tuple[int, int, int, int]) -> None:
+    x, y, width, height = bounds
+    cv2.rectangle(display_frame, (x, y), (x + width - 1, y + height - 1), ui.BORDER_SOFT, 1)
+    corner = 34
+    for start, end in [
+        ((x, y), (x + corner, y)),
+        ((x, y), (x, y + corner)),
+        ((x + width - corner, y), (x + width - 1, y)),
+        ((x + width - 1, y), (x + width - 1, y + corner)),
+        ((x, y + height - 1), (x + corner, y + height - 1)),
+        ((x, y + height - corner), (x, y + height - 1)),
+        ((x + width - corner, y + height - 1), (x + width - 1, y + height - 1)),
+        ((x + width - 1, y + height - corner), (x + width - 1, y + height - 1)),
+    ]:
+        cv2.line(display_frame, start, end, ui.CYAN, 2, cv2.LINE_AA)
+
+
+def _draw_bottom_help(display_frame) -> None:
+    height, width = display_frame.shape[:2]
+    ui.blend_rect(display_frame, (0, height - 54), (width, height), (10, 13, 20), 0.78)
+    cv2.line(display_frame, (0, height - 54), (width, height - 54), ui.BORDER_SOFT, 1, cv2.LINE_AA)
+    ui.put_text(
+        display_frame,
+        "Pinch: Draw/Erase    2 fingers: Move/Select toolbar    C: Clear    Q/Esc: Exit",
+        (28, height - 22),
+        0.56,
+        ui.TEXT_MUTED,
         1,
-        cv2.LINE_AA,
     )

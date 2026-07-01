@@ -23,36 +23,34 @@ class CaptureGestureResult:
 
 
 class TwoHandSpreadCaptureGesture:
-    """Detects two hands pinched near center, spreading outward, then holding still."""
+    """Detects two hands framing a shot, then holding still briefly."""
 
     THUMB_TIP = 4
     INDEX_TIP = 8
 
     def __init__(
         self,
-        center_frames_required: int = 3,
-        stable_frames_required: int = 8,
-        centered_radius_ratio: float = 0.23,
-        cluster_radius_ratio: float = 0.20,
-        spread_ratio_required: float = 0.52,
-        stable_motion_threshold: float = 24.0,
+        stable_frames_required: int = 5,
+        centered_radius_ratio: float = 0.30,
+        cluster_radius_ratio: float = 0.26,
+        spread_ratio_required: float = 0.34,
+        stable_motion_threshold: float = 64.0,
     ) -> None:
-        self.center_frames_required = center_frames_required
         self.stable_frames_required = stable_frames_required
         self.centered_radius_ratio = centered_radius_ratio
         self.cluster_radius_ratio = cluster_radius_ratio
         self.spread_ratio_required = spread_ratio_required
         self.stable_motion_threshold = stable_motion_threshold
         self._phase = CapturePhase.WAITING
-        self._center_frames = 0
         self._stable_frames = 0
         self._last_bounds: tuple[int, int, int, int] | None = None
+        self._capture_latched = False
 
     def reset(self) -> None:
         self._phase = CapturePhase.WAITING
-        self._center_frames = 0
         self._stable_frames = 0
         self._last_bounds = None
+        self._capture_latched = False
 
     def update(self, results, frame_shape) -> CaptureGestureResult:
         points = self._finger_points(results, frame_shape)
@@ -61,7 +59,7 @@ class TwoHandSpreadCaptureGesture:
             return CaptureGestureResult(
                 False,
                 CapturePhase.WAITING,
-                "Show both hands: thumbs + index fingers",
+                "Show both hands in the camera",
                 points,
                 None,
                 0.0,
@@ -81,47 +79,33 @@ class TwoHandSpreadCaptureGesture:
         spread_enough = spread_ratio >= self.spread_ratio_required
 
         captured = False
-        if self._phase == CapturePhase.WAITING:
-            if centered and clustered:
-                self._center_frames += 1
-                self._phase = CapturePhase.CENTER
-            else:
-                self._center_frames = 0
-        elif self._phase == CapturePhase.CENTER:
-            if centered and clustered:
-                self._center_frames += 1
-                if self._center_frames >= self.center_frames_required:
-                    self._phase = CapturePhase.SPREAD
-            else:
-                self.reset()
-        elif self._phase == CapturePhase.SPREAD:
-            if spread_enough:
+        if spread_enough:
+            if self._phase != CapturePhase.HOLD:
                 self._phase = CapturePhase.HOLD
                 self._stable_frames = 0
-            elif clustered and centered:
-                self._stable_frames = 0
-            elif not centered and spread_ratio < 0.25:
-                self.reset()
-        elif self._phase == CapturePhase.HOLD:
-            if not spread_enough:
-                self._phase = CapturePhase.SPREAD
-                self._stable_frames = 0
-            elif self._is_stable(bounds):
+
+            if self._is_stable(bounds, frame_shape):
                 self._stable_frames += 1
-                if self._stable_frames >= self.stable_frames_required:
+                if self._stable_frames >= self.stable_frames_required and not self._capture_latched:
                     captured = True
-                    self.reset()
+                    self._capture_latched = True
             else:
                 self._stable_frames = 0
+        elif centered and clustered:
+            self._phase = CapturePhase.CENTER
+        else:
+            self._phase = CapturePhase.SPREAD
+            self._stable_frames = 0
 
         self._last_bounds = bounds
+        progress = self._progress(spread_ratio, spread_enough)
         return CaptureGestureResult(
             captured,
             self._phase,
             self._message(self._phase),
             points,
             bounds,
-            min(1.0, spread_ratio / self.spread_ratio_required),
+            progress,
         )
 
     def _finger_points(self, results, frame_shape) -> list[tuple[int, int]]:
@@ -151,7 +135,7 @@ class TwoHandSpreadCaptureGesture:
             sum(point[1] for point in points) / len(points),
         )
 
-    def _is_stable(self, bounds: tuple[int, int, int, int]) -> bool:
+    def _is_stable(self, bounds: tuple[int, int, int, int], frame_shape) -> bool:
         if self._last_bounds is None:
             return False
 
@@ -163,16 +147,25 @@ class TwoHandSpreadCaptureGesture:
             + abs(width - last_width)
             + abs(height - last_height)
         )
-        return motion <= self.stable_motion_threshold
+        frame_height, frame_width = frame_shape[:2]
+        dynamic_threshold = max(self.stable_motion_threshold, min(frame_width, frame_height) * 0.08)
+        return motion <= dynamic_threshold
 
     def _distance(self, first, second) -> float:
         return hypot(first[0] - second[0], first[1] - second[1])
 
+    def _progress(self, spread_ratio: float, spread_enough: bool) -> float:
+        spread_progress = min(1.0, spread_ratio / self.spread_ratio_required)
+        if not spread_enough:
+            return spread_progress * 0.70
+        hold_progress = min(1.0, self._stable_frames / max(1, self.stable_frames_required))
+        return 0.70 + hold_progress * 0.30
+
     def _message(self, phase: CapturePhase) -> str:
         if phase == CapturePhase.CENTER:
-            return "Hold 4 fingertips together at screen center"
+            return "Good. Open both hands outward to frame the shot"
         if phase == CapturePhase.SPREAD:
-            return "Move both hands outward to frame the shot"
+            return "Open both hands wider, then hold still"
         if phase == CapturePhase.HOLD:
-            return "Hold still to capture"
-        return "Show both hands: thumbs + index fingers"
+            return "Hold still: auto capture is armed"
+        return "Show both hands in the camera"

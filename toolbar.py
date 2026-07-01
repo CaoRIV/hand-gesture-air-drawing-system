@@ -5,6 +5,8 @@ from enum import Enum
 
 import cv2
 
+import ui_theme as ui
+
 
 class ToolbarAction(Enum):
     RED = "Red"
@@ -49,12 +51,12 @@ class GestureToolbar:
             (ToolbarAction.SAVE, "Save", (120, 220, 180)),
         ]
 
-        button_width = 104
-        button_height = 46
-        gap = 10
+        button_width = 96
+        button_height = 50
+        gap = 8
         total_width = len(specs) * button_width + (len(specs) - 1) * gap
         start_x = max((display_width - total_width) // 2, 16)
-        y = 82
+        y = 94
 
         buttons = []
         for index, (action, label, color) in enumerate(specs):
@@ -100,34 +102,91 @@ def draw_toolbar(
     hovered_action: ToolbarAction | None,
 ) -> None:
     buttons = toolbar.buttons(display_frame.shape[1])
+    if not buttons:
+        return
+
+    first_x = buttons[0].rect[0]
+    first_y = buttons[0].rect[1]
+    last = buttons[-1].rect
+    bar_width = last[0] + last[2] - first_x
+    ui.panel(
+        display_frame,
+        (first_x - 12, first_y - 12, bar_width + 24, 74),
+        fill=(12, 16, 24),
+        border=ui.BORDER_SOFT,
+        alpha=0.76,
+        shadow=True,
+    )
 
     for button in buttons:
         x, y, width, height = button.rect
         is_active = button.action == active_action
         is_hovered = button.action == hovered_action
-        fill = (42, 46, 54)
+        fill = ui.SURFACE_RAISED if is_active else ((34, 42, 54) if is_hovered else ui.SURFACE)
         border = button.color if is_active or is_hovered else (88, 96, 110)
         border_thickness = 3 if is_active or is_hovered else 1
 
-        cv2.rectangle(display_frame, (x, y), (x + width, y + height), fill, -1)
-        cv2.rectangle(
+        ui.panel(
             display_frame,
-            (x, y),
-            (x + width, y + height),
-            border,
-            border_thickness,
-            cv2.LINE_AA,
+            (x, y, width, height),
+            fill=fill,
+            border=border,
+            alpha=0.94,
+            thickness=border_thickness,
+            shadow=False,
         )
+        if is_active:
+            ui.accent_bar(display_frame, (x, y, width, 4), button.color)
 
-        swatch_center = (x + 18, y + height // 2)
-        cv2.circle(display_frame, swatch_center, 9, button.color, -1, cv2.LINE_AA)
-        cv2.putText(
+        draw_tool_icon(
+            display_frame,
+            button.action,
+            (x + 15, y + 14, 22, 22),
+            button.color,
+            is_active or is_hovered,
+        )
+        ui.put_text(
             display_frame,
             button.label,
-            (x + 34, y + 30),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.52,
-            (238, 241, 245),
+            (x + 42, y + 31),
+            0.47,
+            ui.TEXT,
             1,
-            cv2.LINE_AA,
         )
+
+
+def draw_tool_icon(
+    frame,
+    action: ToolbarAction,
+    rect: tuple[int, int, int, int],
+    color: tuple[int, int, int],
+    active: bool,
+) -> None:
+    x, y, width, height = rect
+    center = (x + width // 2, y + height // 2)
+    line_color = color if active else ui.TEXT_MUTED
+
+    if action in {
+        ToolbarAction.RED,
+        ToolbarAction.GREEN,
+        ToolbarAction.BLUE,
+        ToolbarAction.YELLOW,
+        ToolbarAction.WHITE,
+    }:
+        cv2.circle(frame, center, 9, color, -1, cv2.LINE_AA)
+        cv2.circle(frame, center, 11, ui.WHITE, 1, cv2.LINE_AA)
+    elif action == ToolbarAction.ERASER:
+        cv2.rectangle(frame, (x + 4, y + 7), (x + width - 3, y + height - 5), line_color, 2)
+        cv2.line(frame, (x + 5, y + height - 4), (x + width, y + height - 4), ui.TEXT_DIM, 1)
+    elif action == ToolbarAction.THIN:
+        cv2.line(frame, (x + 3, center[1]), (x + width - 3, center[1]), line_color, 2, cv2.LINE_AA)
+    elif action == ToolbarAction.THICK:
+        cv2.line(frame, (x + 3, center[1]), (x + width - 3, center[1]), line_color, 6, cv2.LINE_AA)
+    elif action == ToolbarAction.CLEAR:
+        cv2.line(frame, (x + 4, y + 4), (x + width - 4, y + height - 4), line_color, 2, cv2.LINE_AA)
+        cv2.line(frame, (x + width - 4, y + 4), (x + 4, y + height - 4), line_color, 2, cv2.LINE_AA)
+    elif action == ToolbarAction.SAVE:
+        cv2.line(frame, (center[0], y + 3), (center[0], y + height - 8), line_color, 2, cv2.LINE_AA)
+        cv2.line(frame, (center[0], y + height - 8), (x + 7, y + height - 15), line_color, 2, cv2.LINE_AA)
+        cv2.line(frame, (center[0], y + height - 8), (x + width - 7, y + height - 15), line_color, 2, cv2.LINE_AA)
+        cv2.line(frame, (x + 4, y + height - 3), (x + width - 4, y + height - 3), line_color, 2, cv2.LINE_AA)

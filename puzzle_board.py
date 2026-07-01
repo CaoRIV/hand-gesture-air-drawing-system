@@ -6,6 +6,8 @@ import random
 import cv2
 import numpy as np
 
+import ui_theme as ui
+
 
 @dataclass(frozen=True)
 class PuzzleBoardConfig:
@@ -80,16 +82,27 @@ class PuzzleBoard:
     ) -> None:
         board_x, board_y = top_left
         tile_size = self.config.board_size // self.config.grid_size
-        panel_padding = 12
+        panel_padding = 14
+        ui.panel(
+            frame,
+            (
+                board_x - panel_padding,
+                board_y - panel_padding,
+                self.config.board_size + panel_padding * 2,
+                self.config.board_size + panel_padding * 2,
+            ),
+            fill=(12, 16, 24),
+            border=ui.BORDER_SOFT,
+            alpha=0.92,
+            shadow=True,
+        )
         cv2.rectangle(
             frame,
-            (board_x - panel_padding, board_y - panel_padding),
-            (
-                board_x + self.config.board_size + panel_padding,
-                board_y + self.config.board_size + panel_padding,
-            ),
-            (18, 20, 26),
-            -1,
+            (board_x - 4, board_y - 4),
+            (board_x + self.config.board_size + 4, board_y + self.config.board_size + 4),
+            ui.CYAN,
+            1,
+            cv2.LINE_AA,
         )
 
         for position, tile_id in enumerate(self._order):
@@ -99,13 +112,15 @@ class PuzzleBoard:
             tile = self._tiles[tile_id]
             frame[y : y + tile_size, x : x + tile_size] = tile
 
-            border_color = (45, 48, 56)
+            border_color = (34, 39, 50)
             border_thickness = 2
             if position == hovered_position:
-                border_color = (0, 210, 255)
+                ui.blend_rect(frame, (x, y), (x + tile_size, y + tile_size), ui.CYAN, 0.14)
+                border_color = ui.CYAN
                 border_thickness = 4
             if position == selected_position:
-                border_color = (0, 255, 120)
+                ui.blend_rect(frame, (x, y), (x + tile_size, y + tile_size), ui.GREEN, 0.20)
+                border_color = ui.GREEN
                 border_thickness = 5
 
             cv2.rectangle(
@@ -116,13 +131,15 @@ class PuzzleBoard:
                 border_thickness,
                 cv2.LINE_AA,
             )
+            ui.blend_rect(frame, (x + 8, y + 8), (x + 48, y + 36), (8, 10, 14), 0.72)
+            cv2.rectangle(frame, (x + 8, y + 8), (x + 48, y + 36), ui.BORDER_SOFT, 1, cv2.LINE_AA)
             cv2.putText(
                 frame,
                 str(tile_id + 1),
-                (x + 10, y + 30),
+                (x + 17, y + 29),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.72,
-                (255, 255, 255),
+                0.60,
+                ui.WHITE,
                 2,
                 cv2.LINE_AA,
             )

@@ -69,10 +69,10 @@ D:\Python3\python.exe game_main.py
 
 Puzzle controls:
 
-- Two-hand capture gesture: place both thumbs + both index fingers near the center, spread both hands outward, then hold still to capture
+- Two-hand capture gesture: show both hands, open them wide enough to frame the shot, then hold still briefly for auto capture
 - `3` / `4`: choose 3x3 or 4x4 difficulty before capture
 - `Space`, `Enter`, or `C`: fallback capture
-- The HUD shows `Hands: 0/2`, `1/2`, or `2/2`; the two-hand gesture needs `2/2`
+- The HUD shows `Hands: 0/2`, `1/2`, or `2/2`; auto capture starts when both hands are visible and stable
 - A short countdown runs after capture before the puzzle starts
 - Move hand: control cursor
 - Pinch on a tile: grab/select tile
